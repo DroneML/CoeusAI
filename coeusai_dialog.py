@@ -169,7 +169,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
             if Path(output_path).exists():
                 iface.messageBar().pushMessage(
                     "Warning",
-                    "The selected file already exists and may not be ovewritten. Please create a new file.",
+                    "The selected file already exists and may not be overwritten. Please create a new file.",
                     level=Qgis.Warning,
                     duration=5
                 )
