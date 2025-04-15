@@ -198,8 +198,11 @@ class CoeusAIDialog(QtWidgets.QDialog):
         for layer in self.qgis_layers:
             if isinstance(layer, QgsRasterLayer):
                 output_path = Path(layer.source()).parent / "prediction.tif"
+                counter = 1
+                base_stem = output_path.stem
                 while output_path.exists():
-                    output_path = output_path.with_stem(output_path.stem + "_new")
+                    output_path = output_path.with_stem(f"{base_stem}_{counter}")
+                    counter += 1
                 break
         if output_path is not None:
             output_path_line_edit.setText(output_path.as_posix())
