@@ -4,7 +4,8 @@ import os
 import inspect
 from qgis.PyQt import QtWidgets, QtCore, QtGui
 from qgis.PyQt.QtCore import QThread
-from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject
+from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject, Qgis
+from qgis.utils import iface
 from pycoeus.main import read_input_and_labels_and_save_predictions
 from pycoeus.features import FeatureType
 from .utils import (
@@ -161,11 +162,19 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
     def _browse_output_path(self):
         """Browse for the output path of the prediction."""
-        output_path = QtWidgets.QFileDialog.getSaveFileName(
+        output_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save Prediction", "", "TIFF Files (*.tif)"
         )
-        if output_path[0]:
-            self.output_path_line_edit.setText(output_path[0])
+        if output_path:
+            if Path(output_path).exists():
+                iface.messageBar().pushMessage(
+                    "Warning",
+                    "The selected file already exists and may not be overitten. Please create a new file.",
+                    level=Qgis.Warning,
+                    duration=5
+                )
+            else:
+                self.output_path_line_edit.setText(output_path)
 
     def _get_output_path_input_elements(self, help_text):
         """Elements for the output path input."""
@@ -189,6 +198,8 @@ class CoeusAIDialog(QtWidgets.QDialog):
         for layer in self.qgis_layers:
             if isinstance(layer, QgsRasterLayer):
                 output_path = Path(layer.source()).parent / "prediction.tif"
+                while output_path.exists():
+                    output_path = output_path.with_stem(output_path.stem + "_new")
                 break
         if output_path is not None:
             output_path_line_edit.setText(output_path.as_posix())
