@@ -129,7 +129,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self._add_advanced_options()
 
         # Add run button
-
         self.button_layout = QtWidgets.QHBoxLayout()
         self.run_button = QtWidgets.QPushButton("run")
         self.run_button.clicked.connect(self.start_classification)
@@ -171,7 +170,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
                     "Warning",
                     "The selected file already exists and may not be overwritten. Please create a new file.",
                     level=Qgis.Warning,
-                    duration=5
+                    duration=5,
                 )
             else:
                 self.output_path_line_edit.setText(output_path)
@@ -427,7 +426,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         logger.addHandler(qgis_handler)
 
         # Get the output path
-        if self.output_path_line_edit.text(): # Check if the output path is not empty
+        if self.output_path_line_edit.text():  # Check if the output path is not empty
             output_path = Path(self.output_path_line_edit.text())
 
             # File handler INFO
