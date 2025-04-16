@@ -376,7 +376,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
         else:
             chunk_size = None
             overlap_size = None
-            
 
         prediction_tif = read_input_and_labels_and_save_predictions(
             raster_path,
