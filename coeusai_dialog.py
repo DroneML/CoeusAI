@@ -372,7 +372,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
                 chunk_size = self.chunk_size_spinbox.value()
                 overlap_size = self.overlap_size_spinbox.value()
             self.logger.info(f"Chunk Size: {chunk_size}")
-            self.logger.info(f"Overlap Size: {overlap_size}")      
+            self.logger.info(f"Overlap Size: {overlap_size}")
         else:
             chunk_size = None
             overlap_size = None
