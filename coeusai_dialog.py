@@ -364,13 +364,8 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         # Get chunk size and overlap size
         if compute_mode != "normal":
-            # Default values if advanced options are not checked
-            chunk_size = CHUNK_SIZE
-            overlap_size = CHUNK_OVERLAP
-            # User defined values if advanced options are checked
-            if self.advanced_group_box.isChecked():
-                chunk_size = self.chunk_size_spinbox.value()
-                overlap_size = self.overlap_size_spinbox.value()
+            chunk_size = self.chunk_size_spinbox.value()
+            overlap_size = self.overlap_size_spinbox.value()
             self.logger.info(f"Chunk Size: {chunk_size}")
             self.logger.info(f"Overlap Size: {overlap_size}")
         else:
