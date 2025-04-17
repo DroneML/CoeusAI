@@ -489,7 +489,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         # Check if the output path is empty
         if not self.output_path_line_edit.text():
-            self.logger.error("Output path is empty!")
+            self.logger.error("Output path is empty. Please select an output path to write the predictions to.")
             return False
 
         # Check if combo boxes are empty
