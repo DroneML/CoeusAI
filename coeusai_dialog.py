@@ -164,16 +164,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         output_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save Prediction", "", "TIFF Files (*.tif)"
         )
-        if output_path:
-            if Path(output_path).exists():
-                iface.messageBar().pushMessage(
-                    "Warning",
-                    "The selected file already exists and may not be overwritten. Please create a new file.",
-                    level=Qgis.Warning,
-                    duration=5,
-                )
-            else:
-                self.output_path_line_edit.setText(output_path)
+        self.output_path_line_edit.setText(output_path)
 
     def _get_output_path_input_elements(self, help_text):
         """Elements for the output path input."""
@@ -332,15 +323,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
     def run_classification(self):
         """Run the classification algorithm."""
 
-        # Configure logger
-        self.logger = self._get_logger()
-
-        # Input validation
-        valid = self._validate_input()
-        if not valid:
-            self.logger.error("Invalid input!")
-            return
-
         # Get the output path
         output_path = Path(self.output_path_line_edit.text())
 
@@ -454,6 +436,15 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self.run_button.setEnabled(False)  # Set the run button to be disabled
         self.repaint()
 
+        # Configure logger
+        self.logger = self._get_logger()
+
+        # Input validation
+        valid = self._validate_input()
+        if not valid:
+            self.logger.error("Invalid input!")
+            return
+
         self.job = ClassificationJob(self)
         self.job.start()
 
@@ -489,7 +480,21 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         # Check if the output path is empty
         if not self.output_path_line_edit.text():
-            self.logger.error("Output path is empty. Please select an output path to write the predictions to.")
+            self.logger.error(
+                "Output path is empty. Please select an output path to write the predictions to."
+            )
+            return False
+
+        if Path(self.output_path_line_edit.text()).exists():
+            iface.messageBar().pushMessage(
+                "Warning",
+                "The selected file already exists and may not be overwritten. Please create a new file.",
+                level=Qgis.Warning,
+                duration=5,
+            )
+            self.logger.error(
+                "The selected file already exists and may not be overwritten. Please create a new file."
+            )
             return False
 
         # Check if combo boxes are empty
