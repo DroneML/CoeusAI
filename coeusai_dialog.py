@@ -322,21 +322,9 @@ class CoeusAIDialog(QtWidgets.QDialog):
         output_path = Path(self.output_path_line_edit.text())
 
         # Get file paths of the selected layers
-        raster_path = Path(
-            QgsProject.instance()
-            .mapLayersByName(self.raster_combo.currentText())[0]
-            .source()
-        )
-        pos_labels_path = Path(
-            QgsProject.instance()
-            .mapLayersByName(self.vec_positive_combo.currentText())[0]
-            .source()
-        )
-        neg_labels_path = Path(
-            QgsProject.instance()
-            .mapLayersByName(self.vec_negative_combo.currentText())[0]
-            .source()
-        )
+        raster_path = _get_layer_path(self.raster_combo.currentText())
+        pos_labels_path = _get_layer_path(self.vec_positive_combo.currentText())
+        neg_labels_path = _get_layer_path(self.vec_negative_combo.currentText())
         self.logger.info(f"Raster Layer: {raster_path}")
         self.logger.info(f"Positive Vector Layer: {pos_labels_path}")
         self.logger.info(f"Negative Vector Layer: {neg_labels_path}")
@@ -474,6 +462,13 @@ def _get_help_icon(text: str):
     help_icon.setToolTip(text)
     return help_icon
 
+def _get_layer_path(layer_name: str) -> Path:
+    """Get the file path of a QGIS layer by its name, removing any part after '|'."""
+    layers = QgsProject.instance().mapLayersByName(layer_name)
+    if not layers:
+        raise ValueError(f"No layer found with name: {layer_name}")
+    layer = layers[0]
+    return Path(layer.source().split('|')[0])  # Remove the layer name for gpkg files
 
 def _sort_layers(layers):
     """Get all layers sorted by active layers first."""
