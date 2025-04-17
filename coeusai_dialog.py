@@ -29,6 +29,10 @@ WIDGET_WIDTH = 600  # Width of all the widgets
 WIDGET_HEIGHT = 20  # Height of all non-label widgets
 HELP_ICON_SIZE = 12  # Size of the help icon
 
+# Dask constants
+CHUNK_SIZE = 1000  # Default chunk size
+CHUNK_OVERLAP = 100  # Default chunk overlap size
+
 # Get current folder
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 
@@ -287,7 +291,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         chunk_size_label_layout.setAlignment(QtCore.Qt.AlignLeft)
         self.chunk_size_spinbox = QtWidgets.QSpinBox()
         self.chunk_size_spinbox.setRange(500, 10000)
-        self.chunk_size_spinbox.setValue(100)
+        self.chunk_size_spinbox.setValue(CHUNK_SIZE)
         self.chunk_size_spinbox.setStyleSheet(f"font-size: {FONTSIZE}px;")
         self.advanced_layout.addLayout(chunk_size_label_layout)
         self.advanced_layout.addWidget(self.chunk_size_spinbox)
@@ -304,7 +308,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         overlap_size_label_layout.setAlignment(QtCore.Qt.AlignLeft)
         self.overlap_size_spinbox = QtWidgets.QSpinBox()
         self.overlap_size_spinbox.setRange(0, 1000)
-        self.overlap_size_spinbox.setValue(25)
+        self.overlap_size_spinbox.setValue(CHUNK_OVERLAP)
         self.overlap_size_spinbox.setStyleSheet(f"font-size: {FONTSIZE}px;")
         self.advanced_layout.addLayout(overlap_size_label_layout)
         self.advanced_layout.addWidget(self.overlap_size_spinbox)
@@ -347,7 +351,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self.logger.info(f"Compute Mode: {compute_mode}")
 
         # Get chunk size and overlap size
-        if self.advanced_group_box.isChecked():
+        if compute_mode != "normal":
             chunk_size = self.chunk_size_spinbox.value()
             overlap_size = self.overlap_size_spinbox.value()
             self.logger.info(f"Chunk Size: {chunk_size}")
