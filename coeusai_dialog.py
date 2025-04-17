@@ -442,7 +442,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
         # Input validation
         valid = self._validate_input()
         if not valid:
-            self.logger.error("Invalid input!")
             return
 
         self.job = ClassificationJob(self)
@@ -475,42 +474,44 @@ class CoeusAIDialog(QtWidgets.QDialog):
             if isinstance(layer, QgsVectorLayer):
                 combo_box.addItem(layer.name())
 
-    def _validate_input(self):
-        """Validate the input fields."""
+def _validate_input(self):
+    """Validate the input fields."""
 
-        # Check if the output path is empty
-        if not self.output_path_line_edit.text():
-            self.logger.error(
-                "Output path is empty. Please select an output path to write the predictions to."
-            )
-            return False
+    # Check if the output path is empty
+    path_str = self.output_path_line_edit.text()
+    if not path_str:
+        self.logger.error(
+            "Output path is empty. Please select an output path to write the predictions to."
+        )
+        return False
 
-        if Path(self.output_path_line_edit.text()).exists():
-            iface.messageBar().pushMessage(
-                "Warning",
-                "The selected file already exists and may not be overwritten. Please create a new file.",
-                level=Qgis.Warning,
-                duration=5,
-            )
-            self.logger.error(
-                "The selected file already exists and may not be overwritten. Please create a new file."
-            )
-            return False
+    if Path(path_str).exists():
+        msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
+        iface.messageBar().pushMessage(
+            "Warning",
+            msg,
+            level=Qgis.Warning,
+            duration=5,
+        )
+        self.logger.error(
+            msg
+        )
+        return False
 
-        # Check if combo boxes are empty
-        for combo_box, label in zip(
+    # Check if combo boxes are empty
+    for combo_box, label in zip(
             [
                 self.raster_combo,
                 self.vec_positive_combo,
                 self.vec_negative_combo,
             ],
             ["Raster Layer", "Positive Vector Layer", "Negative Vector Layer"],
-        ):
-            if combo_box.count() == 0:
-                self.logger.error(f"{label} is empty!")
-                return False
+    ):
+        if combo_box.count() == 0:
+            self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
+            return False
 
-        return True
+    return True
 
 
 def _get_help_icon(text: str):
