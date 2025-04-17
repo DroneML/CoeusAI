@@ -425,18 +425,21 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
     def start_classification(self):
         """Start the classification process in a separate thread."""
+        # Input validation
+        valid = self._validate_input()
+        if not valid:
+            return
+        
+        # Disable the run button to prevent multiple clicks
         self.run_button.setEnabled(False)  # Set the run button to be disabled
         self.repaint()
 
         # Configure logger
         self.logger = self._get_logger()
 
-        # Input validation
-        valid = self._validate_input()
-        if not valid:
-            return
-
+        # Start the classification job
         self.job = ClassificationJob(self)
+        self.job.finished.connect(self.close) # Upon completion, close the dialog
         self.job.start()
 
     def closeEvent(self, event):
@@ -454,6 +457,10 @@ class CoeusAIDialog(QtWidgets.QDialog):
                 self.logger.removeHandler(handler)
             del self.logger  # Delete the logger, pycoeus made it global
 
+    def _on_job_finished(self):
+        """Handle the completion of the classification job."""
+        self.close()  # Close the dialog
+
     def _populate_raster_combo(self, combo_box):
         """Populate the raster combo box with the loaded raster layers."""
         for layer in self.qgis_layers:
@@ -466,44 +473,44 @@ class CoeusAIDialog(QtWidgets.QDialog):
             if isinstance(layer, QgsVectorLayer):
                 combo_box.addItem(layer.name())
 
-def _validate_input(self):
-    """Validate the input fields."""
+    def _validate_input(self):
+        """Validate the input fields."""
 
-    # Check if the output path is empty
-    path_str = self.output_path_line_edit.text()
-    if not path_str:
-        self.logger.error(
-            "Output path is empty. Please select an output path to write the predictions to."
-        )
-        return False
-
-    if Path(path_str).exists():
-        msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
-        iface.messageBar().pushMessage(
-            "Warning",
-            msg,
-            level=Qgis.Warning,
-            duration=5,
-        )
-        self.logger.error(
-            msg
-        )
-        return False
-
-    # Check if combo boxes are empty
-    for combo_box, label in zip(
-            [
-                self.raster_combo,
-                self.vec_positive_combo,
-                self.vec_negative_combo,
-            ],
-            ["Raster Layer", "Positive Vector Layer", "Negative Vector Layer"],
-    ):
-        if combo_box.count() == 0:
-            self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
+        # Check if the output path is empty
+        path_str = self.output_path_line_edit.text()
+        if not path_str:
+            self.logger.error(
+                "Output path is empty. Please select an output path to write the predictions to."
+            )
             return False
 
-    return True
+        if Path(path_str).exists():
+            msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
+            iface.messageBar().pushMessage(
+                "Warning",
+                msg,
+                level=Qgis.Warning,
+                duration=5,
+            )
+            self.logger.error(
+                msg
+            )
+            return False
+
+        # Check if combo boxes are empty
+        for combo_box, label in zip(
+                [
+                    self.raster_combo,
+                    self.vec_positive_combo,
+                    self.vec_negative_combo,
+                ],
+                ["Raster Layer", "Positive Vector Layer", "Negative Vector Layer"],
+        ):
+            if combo_box.count() == 0:
+                self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
+                return False
+
+        return True
 
 
 def _get_help_icon(text: str):
