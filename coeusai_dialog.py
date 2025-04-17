@@ -4,7 +4,8 @@ import os
 import inspect
 from qgis.PyQt import QtWidgets, QtCore, QtGui
 from qgis.PyQt.QtCore import QThread
-from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject
+from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject, Qgis
+from qgis.utils import iface
 from pycoeus.main import read_input_and_labels_and_save_predictions
 from pycoeus.features import FeatureType
 from .utils import (
@@ -132,7 +133,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self._add_advanced_options()
 
         # Add run button
-       
         self.button_layout = QtWidgets.QHBoxLayout()
         self.run_button = QtWidgets.QPushButton("run")
         self.run_button.clicked.connect(self.start_classification)
@@ -165,11 +165,10 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
     def _browse_output_path(self):
         """Browse for the output path of the prediction."""
-        output_path = QtWidgets.QFileDialog.getSaveFileName(
+        output_path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save Prediction", "", "TIFF Files (*.tif)"
         )
-        if output_path[0]:
-            self.output_path_line_edit.setText(output_path[0])
+        self.output_path_line_edit.setText(output_path)
 
     def _get_output_path_input_elements(self, help_text):
         """Elements for the output path input."""
@@ -189,11 +188,20 @@ class CoeusAIDialog(QtWidgets.QDialog):
         output_path_line_edit = QtWidgets.QLineEdit()
         output_path_line_edit.setFixedSize(WIDGET_WIDTH, WIDGET_HEIGHT)
         output_path_line_edit.setStyleSheet(f"font-size: {FONTSIZE}px;")
-        output_path = Path()
+        output_path = None
         for layer in self.qgis_layers:
             if isinstance(layer, QgsRasterLayer):
                 output_path = Path(layer.source()).parent / "prediction.tif"
-        output_path_line_edit.setText(output_path.as_posix())
+                counter = 1
+                base_stem = output_path.stem
+                while output_path.exists():
+                    output_path = output_path.with_stem(f"{base_stem}_{counter}")
+                    counter += 1
+                break
+        if output_path is not None:
+            output_path_line_edit.setText(output_path.as_posix())
+        else:
+            output_path_line_edit.setText("")
 
         # Add a button to browse for the output path
         browse_button = QtWidgets.QPushButton("...")
@@ -319,9 +327,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
     def run_classification(self):
         """Run the classification algorithm."""
 
-        # Configure logger
-        self.logger = self._get_logger()
-
         # Get the output path
         output_path = Path(self.output_path_line_edit.text())
 
@@ -387,32 +392,34 @@ class CoeusAIDialog(QtWidgets.QDialog):
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
+
         # QGIS log handler
         qgis_handler = QgisLogHandler()
         qgis_handler.setLevel(logging.INFO)
         qgis_handler.setFormatter(formatter)
+        logger.addHandler(qgis_handler)
 
         # Get the output path
-        output_path = Path(self.output_path_line_edit.text())
+        if self.output_path_line_edit.text():  # Check if the output path is not empty
+            output_path = Path(self.output_path_line_edit.text())
 
-        # File handler INFO
-        file_handler_info = logging.FileHandler(
-            f"{output_path.with_suffix('.info.log')}"
-        )
-        file_handler_info.setLevel(logging.INFO)
-        file_handler_info.setFormatter(formatter)
+            # File handler INFO
+            file_handler_info = logging.FileHandler(
+                f"{output_path.with_suffix('.info.log')}"
+            )
+            file_handler_info.setLevel(logging.INFO)
+            file_handler_info.setFormatter(formatter)
 
-        # File handler DEBUG
-        file_handler_debug = logging.FileHandler(
-            f"{output_path.with_suffix('.debug.log')}"
-        )
-        file_handler_debug.setLevel(logging.DEBUG)
-        file_handler_debug.setFormatter(formatter)
+            # File handler DEBUG
+            file_handler_debug = logging.FileHandler(
+                f"{output_path.with_suffix('.debug.log')}"
+            )
+            file_handler_debug.setLevel(logging.DEBUG)
+            file_handler_debug.setFormatter(formatter)
 
-        # Add the handlers to the logger
-        logger.addHandler(qgis_handler)
-        logger.addHandler(file_handler_info)
-        logger.addHandler(file_handler_debug)
+            # Add the handlers to the logger
+            logger.addHandler(file_handler_info)
+            logger.addHandler(file_handler_debug)
 
         return logger
 
@@ -420,6 +427,14 @@ class CoeusAIDialog(QtWidgets.QDialog):
         """Start the classification process in a separate thread."""
         self.run_button.setEnabled(False)  # Set the run button to be disabled
         self.repaint()
+
+        # Configure logger
+        self.logger = self._get_logger()
+
+        # Input validation
+        valid = self._validate_input()
+        if not valid:
+            return
 
         self.job = ClassificationJob(self)
         self.job.start()
@@ -430,14 +445,14 @@ class CoeusAIDialog(QtWidgets.QDialog):
             self.job.terminate()
             self.job.wait()
         event.accept()
-        
+
         # Close the logger
         if self.logger is not None:
             handlers = self.logger.handlers[:]
             for handler in handlers:
                 handler.close()
                 self.logger.removeHandler(handler)
-            del self.logger # Delete the logger, pycoeus made it global
+            del self.logger  # Delete the logger, pycoeus made it global
 
     def _populate_raster_combo(self, combo_box):
         """Populate the raster combo box with the loaded raster layers."""
@@ -450,6 +465,45 @@ class CoeusAIDialog(QtWidgets.QDialog):
         for layer in self.qgis_layers:
             if isinstance(layer, QgsVectorLayer):
                 combo_box.addItem(layer.name())
+
+def _validate_input(self):
+    """Validate the input fields."""
+
+    # Check if the output path is empty
+    path_str = self.output_path_line_edit.text()
+    if not path_str:
+        self.logger.error(
+            "Output path is empty. Please select an output path to write the predictions to."
+        )
+        return False
+
+    if Path(path_str).exists():
+        msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
+        iface.messageBar().pushMessage(
+            "Warning",
+            msg,
+            level=Qgis.Warning,
+            duration=5,
+        )
+        self.logger.error(
+            msg
+        )
+        return False
+
+    # Check if combo boxes are empty
+    for combo_box, label in zip(
+            [
+                self.raster_combo,
+                self.vec_positive_combo,
+                self.vec_negative_combo,
+            ],
+            ["Raster Layer", "Positive Vector Layer", "Negative Vector Layer"],
+    ):
+        if combo_box.count() == 0:
+            self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
+            return False
+
+    return True
 
 
 def _get_help_icon(text: str):
@@ -510,7 +564,6 @@ class RadioButtonWithHelp(QtWidgets.QWidget):
 
 
 class ClassificationJob(QThread):
-
     def __init__(self, dialog):
         super().__init__()
         self.dialog = dialog
@@ -519,4 +572,4 @@ class ClassificationJob(QThread):
         try:
             self.dialog.run_classification()
         except Exception as e:
-           self.dialog.logger.error(f"Error: {str(e)}")
+            self.dialog.logger.error(f"Error: {str(e)}")
