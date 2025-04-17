@@ -464,7 +464,10 @@ def _get_help_icon(text: str):
 
 def _get_layer_path(layer_name: str) -> Path:
     """Get the file path of a QGIS layer by its name, removing any part after '|'."""
-    layer = QgsProject.instance().mapLayersByName(layer_name)[0]
+    layers = QgsProject.instance().mapLayersByName(layer_name)
+    if not layers:
+        raise ValueError(f"No layer found with name: {layer_name}")
+    layer = layers[0]
     return Path(layer.source().split('|')[0])  # Remove the layer name for gpkg files
 
 def _sort_layers(layers):
