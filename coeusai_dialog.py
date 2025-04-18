@@ -44,7 +44,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         super(CoeusAIDialog, self).__init__(parent)
 
         # Init a logger
-        self.logger = None
+        self.logger = logging.getLogger(__name__)
 
         # Set up the dialog window properties
         self.setWindowTitle("CoeusAI Plugin")
@@ -386,9 +386,8 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         self.logger.info("Classification completed successfully!")
 
-    def _get_logger(self):
+    def _set_logger(self):
         # Configure logger
-        logger = logging.getLogger(__name__)
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
@@ -397,7 +396,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         qgis_handler = QgisLogHandler()
         qgis_handler.setLevel(logging.INFO)
         qgis_handler.setFormatter(formatter)
-        logger.addHandler(qgis_handler)
+        self.logger.addHandler(qgis_handler)
 
         # Get the output path
         if self.output_path_line_edit.text():  # Check if the output path is not empty
@@ -418,10 +417,10 @@ class CoeusAIDialog(QtWidgets.QDialog):
             file_handler_debug.setFormatter(formatter)
 
             # Add the handlers to the logger
-            logger.addHandler(file_handler_info)
-            logger.addHandler(file_handler_debug)
+            self.logger.addHandler(file_handler_info)
+            self.logger.addHandler(file_handler_debug)
 
-        return logger
+        return True
 
     def start_classification(self):
         """Start the classification process in a separate thread."""
@@ -435,7 +434,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self.repaint()
 
         # Configure logger
-        self.logger = self._get_logger()
+        self._set_logger()
 
         # Start the classification job
         self.job = ClassificationJob(self)
