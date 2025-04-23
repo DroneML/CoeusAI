@@ -398,7 +398,7 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
     def _set_logger(self):
         logger = logging.getLogger(__name__)
-        logger.setLevel(logging.DEBUG)  # Set the base logging level
+        logger.setLevel(logging.INFO)  # Set the base logging level
 
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
