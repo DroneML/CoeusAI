@@ -385,7 +385,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
             compute_mode=compute_mode,
             chunks=chunk_size,
             chunk_overlap=overlap_size,
-            logger_input=self.logger,
         )
 
         # Add the new raster layer to QGIS
