@@ -404,6 +404,12 @@ class CoeusAIDialog(QtWidgets.QDialog):
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
+        # If the logger already has handlers, remove them
+        if logger.handlers:
+            for handler in logger.handlers[:]:
+                handler.close()
+                logger.removeHandler(handler)
+
         # File Handlers (INFO and DEBUG)
         output_path = Path(self._get_default_log_path())  # Define a default log path
         info_log_path = output_path.with_suffix(".info.log")
