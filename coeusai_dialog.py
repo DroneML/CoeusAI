@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import inspect
 from qgis.PyQt import QtWidgets, QtCore, QtGui
-from qgis.PyQt.QtCore import QThread
+from qgis.PyQt.QtCore import QThread, pyqtSignal
 from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject, Qgis
 from qgis.utils import iface
 from pycoeus.main import read_input_and_labels_and_save_predictions
@@ -444,10 +444,27 @@ class CoeusAIDialog(QtWidgets.QDialog):
         self.run_button.setEnabled(False)  # Set the run button to be disabled
         self.repaint()
 
+        # Create a progress dialog
+        self.progress_dialog = QtWidgets.QProgressDialog("Performing segmentation...", "Cancel", 0, 0, self)
+        self.progress_dialog.setWindowTitle("CoeusAI")
+        self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.show()
+
         # Start the classification job
         self.job = ClassificationJob(self)
-        self.job.finished.connect(self.close)  # Upon completion, close the dialog
+        self.job.finished.connect(self._on_classification_finished)  # Upon completion, close the dialog
         self.job.start()
+
+    def _on_classification_finished(self):
+        """Handle the completion of the classification job."""
+        # Close the progress dialog
+        if self.progress_dialog:
+            self.progress_dialog.close()
+
+        # Close the dialog
+        self.close()
 
     def closeEvent(self, event):
         """Handle the dialog close event."""
