@@ -4,9 +4,13 @@
 
 QGIS plugin for drone image segmentation using machine learning.
 
-## Installation
+## Installation (also applicable for when using a new version of the plugin)
 
-### Step 1: Install dependencies
+Below are the steps to install the CoeusAI plugin in QGIS.
+
+**Please note that the following steps are also applicable when updating to a new version of the plugin.** If you only install the plugin from ZIP, you will not have the latest version of the dependencies. Therefore, it is recommended to follow all the steps below.
+
+### Step 1: Install dependencies 
 
 In QGIS, go to `Plugins` > `Python Console`.
 
