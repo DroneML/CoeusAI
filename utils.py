@@ -31,7 +31,8 @@ HTEXT_COMPUTE_MODE_SAFE = (
     "Suitable for large datasets that do not fit in memory."
 )
 HTEXT_CHUNK_SIZE = (
-    "The size of the chunk to be read in. Only used in Parallel and Safe mode."
+    "The size of the chunk to be read in. Only used in Parallel and Safe mode.\n"
+    "Minimum 500 to avoid large overhead.\n"
 )
 HTEXT_OVERLAP_SIZE = (
     "The overlap between chunks when performing feature extraction. Only used in Parallel and Safe mode.\n"

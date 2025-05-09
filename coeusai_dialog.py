@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import inspect
 from qgis.PyQt import QtWidgets, QtCore, QtGui
-from qgis.PyQt.QtCore import QThread
+from qgis.PyQt.QtCore import QThread, pyqtSignal
 from qgis.core import QgsRasterLayer, QgsVectorLayer, QgsProject, Qgis
 from qgis.utils import iface
 from pycoeus.main import read_input_and_labels_and_save_predictions
@@ -37,14 +37,22 @@ CHUNK_OVERLAP = 100  # Default chunk overlap size
 # Get current folder
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 
+# Configure the root logger
+qgis_handler = QgisLogHandler()
+qgis_handler.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        qgis_handler,
+    ],
+)
+
 
 class CoeusAIDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         """Constructor."""
         super(CoeusAIDialog, self).__init__(parent)
-
-        # Init a logger
-        self.logger = None
 
         # Set up the dialog window properties
         self.setWindowTitle("CoeusAI Plugin")
@@ -156,6 +164,9 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         # Initialize the job thread
         self.job = None
+
+        # Initialize the logger
+        self.logger = self._set_logger()
 
     def _add_separator(self):
         """Add a separator to the layout."""
@@ -374,7 +385,6 @@ class CoeusAIDialog(QtWidgets.QDialog):
             compute_mode=compute_mode,
             chunks=chunk_size,
             chunk_overlap=overlap_size,
-            logger_root=self.logger,
         )
 
         # Add the new raster layer to QGIS
@@ -386,58 +396,75 @@ class CoeusAIDialog(QtWidgets.QDialog):
 
         self.logger.info("Classification completed successfully!")
 
-    def _get_logger(self):
-        # Configure logger
+    def _set_logger(self):
         logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)  # Set the base logging level
+
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
-        # QGIS log handler
-        qgis_handler = QgisLogHandler()
-        qgis_handler.setLevel(logging.INFO)
-        qgis_handler.setFormatter(formatter)
-        logger.addHandler(qgis_handler)
+        # If the logger already has handlers, remove them
+        if logger.handlers:
+            for handler in logger.handlers[:]:
+                handler.close()
+                logger.removeHandler(handler)
 
-        # Get the output path
-        if self.output_path_line_edit.text():  # Check if the output path is not empty
-            output_path = Path(self.output_path_line_edit.text())
+        # File Handlers (INFO and DEBUG)
+        output_path = Path(self._get_default_log_path())  # Define a default log path
+        info_log_path = output_path.with_suffix(".info.log")
+        debug_log_path = output_path.with_suffix(".debug.log")
 
-            # File handler INFO
-            file_handler_info = logging.FileHandler(
-                f"{output_path.with_suffix('.info.log')}"
-            )
-            file_handler_info.setLevel(logging.INFO)
-            file_handler_info.setFormatter(formatter)
+        file_handler_info = logging.FileHandler(info_log_path)
+        file_handler_info.setLevel(logging.INFO)
+        file_handler_info.setFormatter(formatter)
+        logger.addHandler(file_handler_info)
 
-            # File handler DEBUG
-            file_handler_debug = logging.FileHandler(
-                f"{output_path.with_suffix('.debug.log')}"
-            )
-            file_handler_debug.setLevel(logging.DEBUG)
-            file_handler_debug.setFormatter(formatter)
-
-            # Add the handlers to the logger
-            logger.addHandler(file_handler_info)
-            logger.addHandler(file_handler_debug)
+        file_handler_debug = logging.FileHandler(debug_log_path)
+        file_handler_debug.setLevel(logging.DEBUG)
+        file_handler_debug.setFormatter(formatter)
+        logger.addHandler(file_handler_debug)
 
         return logger
 
+    def _get_default_log_path(self):
+        """Get the default log path based on the output path."""
+        if self.output_path_line_edit and self.output_path_line_edit.text():
+            return self.output_path_line_edit.text()
+        return "default_log"  # Fallback if no output path is set
+
     def start_classification(self):
         """Start the classification process in a separate thread."""
-        self.run_button.setEnabled(False)  # Set the run button to be disabled
-        self.repaint()
-
-        # Configure logger
-        self.logger = self._get_logger()
-
         # Input validation
         valid = self._validate_input()
         if not valid:
             return
 
+        # Disable the run button to prevent multiple clicks
+        self.run_button.setEnabled(False)  # Set the run button to be disabled
+        self.repaint()
+
+        # Create a progress dialog
+        self.progress_dialog = QtWidgets.QProgressDialog("Performing segmentation...", "Cancel", 0, 0, self)
+        self.progress_dialog.setWindowTitle("CoeusAI")
+        self.progress_dialog.setWindowModality(QtCore.Qt.WindowModal)
+        self.progress_dialog.setCancelButton(None)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.show()
+
+        # Start the classification job
         self.job = ClassificationJob(self)
+        self.job.finished.connect(self._on_classification_finished)  # Upon completion, close the dialog
         self.job.start()
+
+    def _on_classification_finished(self):
+        """Handle the completion of the classification job."""
+        # Close the progress dialog
+        if self.progress_dialog:
+            self.progress_dialog.close()
+
+        # Close the dialog
+        self.close()
 
     def closeEvent(self, event):
         """Handle the dialog close event."""
@@ -447,12 +474,12 @@ class CoeusAIDialog(QtWidgets.QDialog):
         event.accept()
 
         # Close the logger
-        if self.logger is not None:
+        if self.logger:
             handlers = self.logger.handlers[:]
             for handler in handlers:
                 handler.close()
                 self.logger.removeHandler(handler)
-            del self.logger  # Delete the logger, pycoeus made it global
+            super().closeEvent(event)
 
     def _populate_raster_combo(self, combo_box):
         """Populate the raster combo box with the loaded raster layers."""
@@ -466,44 +493,42 @@ class CoeusAIDialog(QtWidgets.QDialog):
             if isinstance(layer, QgsVectorLayer):
                 combo_box.addItem(layer.name())
 
-def _validate_input(self):
-    """Validate the input fields."""
+    def _validate_input(self):
+        """Validate the input fields."""
 
-    # Check if the output path is empty
-    path_str = self.output_path_line_edit.text()
-    if not path_str:
-        self.logger.error(
-            "Output path is empty. Please select an output path to write the predictions to."
-        )
-        return False
+        # Check if the output path is empty
+        path_str = self.output_path_line_edit.text()
+        if not path_str:
+            self.logger.error(
+                "Output path is empty. Please select an output path to write the predictions to."
+            )
+            return False
 
-    if Path(path_str).exists():
-        msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
-        iface.messageBar().pushMessage(
-            "Warning",
-            msg,
-            level=Qgis.Warning,
-            duration=5,
-        )
-        self.logger.error(
-            msg
-        )
-        return False
+        if Path(path_str).exists():
+            msg = f"The output path ({path_str}) already exists. Please select a new output path to write the predictions to."
+            iface.messageBar().pushMessage(
+                "Warning",
+                msg,
+                level=Qgis.Warning,
+                duration=5,
+            )
+            self.logger.error(msg)
+            return False
 
-    # Check if combo boxes are empty
-    for combo_box, label in zip(
+        # Check if combo boxes are empty
+        for combo_box, label in zip(
             [
                 self.raster_combo,
                 self.vec_positive_combo,
                 self.vec_negative_combo,
             ],
             ["Raster Layer", "Positive Vector Layer", "Negative Vector Layer"],
-    ):
-        if combo_box.count() == 0:
-            self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
-            return False
+        ):
+            if combo_box.count() == 0:
+                self.logger.error(f"{label} is empty. Please select a {label.lower()}.")
+                return False
 
-    return True
+        return True
 
 
 def _get_help_icon(text: str):
@@ -520,13 +545,15 @@ def _get_help_icon(text: str):
     help_icon.setToolTip(text)
     return help_icon
 
+
 def _get_layer_path(layer_name: str) -> Path:
     """Get the file path of a QGIS layer by its name, removing any part after '|'."""
     layers = QgsProject.instance().mapLayersByName(layer_name)
     if not layers:
         raise ValueError(f"No layer found with name: {layer_name}")
     layer = layers[0]
-    return Path(layer.source().split('|')[0])  # Remove the layer name for gpkg files
+    return Path(layer.source().split("|")[0])  # Remove the layer name for gpkg files
+
 
 def _sort_layers(layers):
     """Get all layers sorted by active layers first."""
