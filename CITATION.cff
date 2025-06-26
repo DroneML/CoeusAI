@@ -23,6 +23,16 @@ authors:
     email: mtm.de.kleijn@vu.nl
     affiliation: Vrije Universiteit Amsterdam
     orcid: 'https://orcid.org/0000-0003-2379-191X'
+  - given-names: Jitte 
+    family-names: Waagen
+    email: J.Waagen@uva.nl
+    affiliation: Universiteit van Amsterdam
+    orcid: 'https://orcid.org/0000-0001-8884-3704'
+  - given-names: Mason 
+    family-names: Scholte
+    email: l.m.scholte2@uva.nl
+    affiliation: Universiteit van Amsterdam
+    orcid: 'https://orcid.org/0009-0001-2603-5442/'
 repository-code: 'https://github.com/DroneML/CoeusAI'
 keywords:
   - QGIS

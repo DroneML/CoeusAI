@@ -2,7 +2,9 @@
 name=CoeusAI
 qgisMinimumVersion=3.30
 description=QGIS plugin for image segmentation using machine learning.
+about=CoeusAI is a QGIS plug-in developed in Python for anomaly identification in remote sensing data through image segmentation. Users can provide annotated examples of both positive (anomaly) and negative (non-anomaly) features, which serve as initial training data for the model. The annotation process is iterative, allowing users to incrementally refine the segmentation by adding new labels as needed. CoeusAI integrates multiple machine learning techniques, combining transfer learning from a U-Net convolutional neural network (CNN) pre-trained on the high-resolution FLAIR1 land cover dataset, with ensemble learning via a random forest classifier. This hybrid approach enables the robust segmentation of potential anomalies within the imagery. A key application of CoeusAI is the enhanced detection of archaeological features in UAV (unmanned aerial vehicle) remote sensing imagery.
 version=0.2.4
-author=Christiaan Meijer, Ou Ku, Maurice de Kleijn
+author=Christiaan Meijer, Ou Ku, Maurice de Kleijn, Jitte Waagen, Mason Scholte
 email=c.meijer@esciencecenter.nl
 category=Analysis
+tags= QGIS,Segmentation,Drone,Raster,Machine Learning,Archaeology,U-Net
