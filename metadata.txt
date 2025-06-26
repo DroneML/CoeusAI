@@ -7,4 +7,4 @@ version=0.2.4
 author=Christiaan Meijer, Ou Ku, Maurice de Kleijn, Jitte Waagen, Mason Scholte
 email=c.meijer@esciencecenter.nl
 category=Analysis
-tags= QGIS,Segmentation,Drone,Raster,Machine Learning,Archaeolog
+tags= QGIS,Segmentation,Drone,Raster,Machine Learning,Archaeology,U-Net
